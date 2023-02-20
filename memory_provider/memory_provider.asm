@@ -568,7 +568,7 @@ INTERRUPT_HANDLER_CLC3
 	BTFSC PORTA, 5, A
 	BRA INTERRUPT_HANDLER_CLC3_WRITE
 	; read operation
-	; read ROM and output to the port
+	; read RAM and output to the port
 	MOVFF INDF1, LATC
 	CLRF TRISC, A
 	; reset WAIT
