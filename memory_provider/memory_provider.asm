@@ -343,10 +343,10 @@ Z80_RESET_LOOP2
 	; Data 2 = IN1 (MREQ)
 	MOVLW D'1'
 	MOVWF CLCnSEL1
-	; Data 3 = CRC7
+	; Data 3 = CLC7
 	MOVLW D'57'
 	MOVWF CLCnSEL2
-	; Data 4 = CRC4 (0)
+	; Data 4 = CLC4 (0)
 	MOVLW D'54'
 	MOVWF CLCnSEL3
 	; Gate 1 = Data 1 & ~Data 2 & Data 3
@@ -427,10 +427,10 @@ Z80_RESET_LOOP2
 	; CLC7 : helper for detect RAM access (A15 = 1, A14 = 0, A13 = 0, A12 = 0)
 	INCF CLCSELECT, F
 	; Data 1 = IN2 (A15)
-	MOVLW D'4'
+	MOVLW D'2'
 	MOVWF CLCnSEL0
 	; Data 2 = IN3 (A14)
-	MOVLW D'1'
+	MOVLW D'3'
 	MOVWF CLCnSEL1
 	; Data 3 = IN6 (A13)
 	MOVLW D'6'
