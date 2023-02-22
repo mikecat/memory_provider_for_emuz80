@@ -489,7 +489,8 @@ Z80_RESET_LOOP2
 
 	; prepare for queries
 	; set ROM table high address
-	MOVLW ROM_DATA >> 16
+	;MOVLW ROM_DATA >> 16
+	MOVLW 0x01 ; workaround: the high address was not correctly retrieved
 	MOVWF TBLPTR + 2
 	; set FSR0 to access CLCnPOL
 	MOVLW CLCnPOL & 0xFF
