@@ -261,7 +261,7 @@ Z80_RESET_LOOP2
 	MOVWF U3BRG + 1
 	; don't stop on RX overflow
 	BSF U3CON2, 7
-	; enable TX, enable UX, Asynchronous 8-bit, no pality
+	; enable TX, enable RX, Asynchronous 8-bit, no pality
 	MOVLW B'00110000'
 	MOVWF U3CON0
 	; enable serial port
