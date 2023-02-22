@@ -80,6 +80,10 @@ CLCIN6PPS EQU 0x0267
 CLCIN7PPS EQU 0x0268
 U3RXPPS EQU 0x0276
 
+U2TXB EQU 0x02B6
+U2CON0 EQU 0x02BE
+U2CON1 EQU 0x02BF
+
 U3RXB EQU 0x02C7
 U3TXB EQU 0x02C9
 U3CON0 EQU 0x02D1
@@ -109,7 +113,6 @@ SLRCONE EQU 0x0423
 INLVLE EQU 0x0424
 
 NCO1INC EQU 0x0443
-NCO1CON EQU 0x0446
 
 IVTLOCK EQU 0x0459
 INTBASEL EQU 0x045D
@@ -140,10 +143,8 @@ PORTE EQU 0x04D2
 
 INTCON0 EQU 0x04D6
 
-FSR1 EQU 0x04E1
-POSTINC1 EQU 0x04E6
-INDF1 EQU 0x04E7
 FSR0 EQU 0x04E9
+POSTINC0 EQU 0x04EE
 INDF0 EQU 0x04EF
 TABLAT EQU 0x04F5
 TBLPTR EQU 0x04F6
@@ -267,6 +268,13 @@ Z80_RESET_LOOP2
 	; enable serial port
 	BSF U3CON1, 7
 
+	; UART2: use as CLC1 reset signal
+	; high speed, enable TX, Asynchronous 7-bit
+	MOVLW B'10100001'
+	MOVWF U2CON0
+	; enable serial port
+	BSF U2CON1, 7
+
 	; configure CLC
 	; remainder : IN0 = IOREQ, IN1 = MREQ, IN4 = RFSH
 	; remainder : IN2 = A15, IN3 = A14, IN6 = A13, IN7 = A12
@@ -274,29 +282,28 @@ Z80_RESET_LOOP2
 	MOVLB 0
 	; CLC1 : switch to LOW when one of detection signals becomes HIGH
 	CLRF CLCSELECT
-	; Data 1 = CLC2
-	MOVLW D'52'
+	; Data 1 = CLC8
+	MOVLW D'58'
 	MOVWF CLCnSEL0
-	; Data 2 = CLC3
-	MOVLW D'53'
+	; Data 2 = U2TX
+	MOVLW D'60'
 	MOVWF CLCnSEL1
-	; Data 3 = CLC5
-	MOVLW D'55'
+	; Data 3 = Data 4 = CRC3 (0)
+	MOVLW D'54'
 	MOVWF CLCnSEL2
-	; Data 4 = CLC6
-	MOVLW D'56'
 	MOVWF CLCnSEL3
-	; Gate 1 (CLK) = Data 1 | Data 2 | Data 3 | Data 4
-	MOVLW  B'10101010'
+	; Gate 1 (CLK) = Data 1
+	MOVLW  B'00000010'
 	MOVWF CLCnGLS0
 	; Gate 2 (D) = const 1
 	CLRF CLCnGLS1
-	; Gate 3 (RESET) = const 1
-	CLRF CLCnGLS2
+	; Gate 3 (RESET) = ~Data 2
+	MOVLW  B'00000100'
+	MOVWF CLCnGLS2
 	; Gate 4 (SET) = const 0
 	CLRF CLCnGLS3
 	; invert output
-	MOVLW B'10000110'
+	MOVLW B'10000010'
 	MOVWF CLCnPOL
 	; enable, no interrupts, 1-input D-FF
 	MOVLW B'10000100'
@@ -444,22 +451,33 @@ Z80_RESET_LOOP2
 	; enable, no interrupts, 4-input AND
 	MOVLW B'10000010'
 	MOVWF CLCnCON
-	; CLC8 : don't use
+	; CLC8 : merge access detections
 	INCF CLCSELECT, F
-	; Data 1 = Data 2 = Data 3 = Data 4 = CLC4 (0)
-	MOVLW D'54'
+	; Data 1 = CLC2
+	MOVLW D'52'
 	MOVWF CLCnSEL0
+	; Data 2 = CLC3
+	MOVLW D'53'
 	MOVWF CLCnSEL1
+	; Data 3 = CLC5
+	MOVLW D'55'
 	MOVWF CLCnSEL2
+	; Data 4 = CLC6
+	MOVLW D'56'
 	MOVWF CLCnSEL3
-	; Gate 1 = Gate 2 = Gate 3 = Gate 4 = const 0
-	CLRF CLCnGLS0
+	; Gate 1 (CLK) = Data 1 | Data 2 | Data 3 | Data 4
+	MOVLW  B'10101010'
+	MOVWF CLCnGLS0
+	; Gate 2 = Gate 3 = Gate 4 = const 1
 	CLRF CLCnGLS1
 	CLRF CLCnGLS2
 	CLRF CLCnGLS3
-	; release reset on CLC1
-	CLRF CLCSELECT
-	BCF CLCnPOL, 2
+	; don't invert output
+	MOVLW B'00001110'
+	MOVWF CLCnPOL
+	; enable, no interrupts, 4-input AND
+	MOVLW B'10000010'
+	MOVWF CLCnCON
 
 	; configure interrupts
 	MOVLB 4
@@ -492,30 +510,33 @@ Z80_RESET_LOOP2
 	;MOVLW ROM_DATA >> 16
 	MOVLW 0x01 ; workaround: the high address was not correctly retrieved
 	MOVWF TBLPTR + 2
-	; set FSR0 to access CLCnPOL
-	MOVLW CLCnPOL & 0xFF
-	MOVWF FSR0
-	MOVLW CLCnPOL >> 8
-	MOVWF FSR0 + 1
+	; set bank to 2 for accessing UART
+	MOVLB 2
+	; reset WAIT
+	SETF U2TXB
 
 	; enable global interrupts
-	BSF INTCON0, GIE
+	BSF INTCON0, GIE, A
 
 	; release Z80 reset
-	BSF LATE, 1
+	BSF LATE, 1, A
 
 	; configure NCO1
 	; overflow_freq = (clock_freq * increment) / (1 << 20)
 	; output_freq = overflow_freq / 2
 	; increment = (output_freq * 2) * (1 << 20) / clock_freq
 	; output_freq = 2.5MHz, clock_freq = 64MHz -> increment = 81920.0 (0x14000)
-	CLRF NCO1INC
+	MOVLW NCO1INC & 0xFF
+	MOVWF FSR0, A
+	MOVLW (NCO1INC >> 8) & 0xFF
+	MOVWF FSR0 + 1, A
+	CLRF POSTINC0, A ; NCO1INC
 	MOVLW 0x40
-	MOVWF NCO1INC + 1
+	MOVWF POSTINC0, A ; NCO1INC + 1
 	MOVLW 0x01
-	MOVWF NCO1INC + 2
+	MOVWF POSTINC0, A ; NCO1INC + 2
 	; enable NCO1
-	BSF NCO1CON, 7
+	BSF INDF0, 7, A ; NCO1CON
 
 	; just wait for interrupts
 NOTHING_TO_DO
@@ -535,8 +556,7 @@ INTERRUPT_HANDLER_CLC2
 	MOVFF TABLAT, LATC
 	CLRF TRISC, A
 	; reset WAIT
-	BSF INDF0, 2, A
-	BCF INDF0, 2, A
+	SETF U2TXB
 	; clear interrupt flag
 	BCF PIR6, CLC2IF, A
 	; wait until RD goes HIGH
@@ -544,15 +564,14 @@ INTERRUPT_HANDLER_CLC2_WAIT_RD_CLEAR
 	BTFSS PORTA, 5, A
 	BRA INTERRUPT_HANDLER_CLC2_WAIT_RD_CLEAR
 	; stop emitting value
-	COMF TRISC, F, A
+	SETF TRISC, A
 	; done
 	RETFIE 1
 INTERRUPT_HANDLER_CLC2_WRITE
 	; write operation
 	; do nothing because this is ROM
 	; reset WAIT
-	BSF INDF0, 2, A
-	BCF INDF0, 2, A
+	SETF U2TXB
 	; clear interrupt flag
 	BCF PIR6, CLC2IF, A
 	; done
@@ -565,20 +584,19 @@ INTERRUPT_HANDLER_CLC3
 	; the most significant 2 bits of FSR1H will be ignored
 	; switching address between interrupt trigger and interrupt handling may enable
 	; access to RAM 0x3000 - 0x3FFF, but this region is unimplemented and should be useless
-	MOVFF PORTB, FSR1
+	MOVFF PORTB, FSR0
 	MOVF PORTD, W, A
 	IORLW 0x10
-	MOVWF FSR1 + 1, A
+	MOVWF FSR0 + 1, A
 	; check RD
 	BTFSC PORTA, 5, A
 	BRA INTERRUPT_HANDLER_CLC3_WRITE
 	; read operation
 	; read RAM and output to the port
-	MOVFF INDF1, LATC
+	MOVFF INDF0, LATC
 	CLRF TRISC, A
 	; reset WAIT
-	BSF INDF0, 2, A
-	BCF INDF0, 2, A
+	SETF U2TXB
 	; clear interrupt flag
 	BCF PIR7, CLC3IF, A
 	; wait until RD goes HIGH
@@ -586,15 +604,14 @@ INTERRUPT_HANDLER_CLC3_WAIT_RD_CLEAR
 	BTFSS PORTA, 5, A
 	BRA INTERRUPT_HANDLER_CLC3_WAIT_RD_CLEAR
 	; stop emitting value
-	COMF TRISC, F, A
+	SETF TRISC, A
 	; done
 	RETFIE 1
 INTERRUPT_HANDLER_CLC3_WRITE
 	; write operation
-	MOVFF PORTC, INDF1
+	MOVFF PORTC, INDF0
 	; reset WAIT
-	BSF INDF0, 2, A
-	BCF INDF0, 2, A
+	SETF U2TXB
 	; clear interrupt flag
 	BCF PIR7, CLC3IF, A
 	; done
@@ -615,8 +632,7 @@ INTERRUPT_HANDLER_CLC5
 	; no matching address
 INTERRUPT_HANDLER_CLC5_UNDEFINED
 	; reset WAIT
-	BSF INDF0, 2, A
-	BCF INDF0, 2, A
+	SETF U2TXB
 	; clear interrupt flag
 	BCF PIR10, CLC5IF, A
 	; done
@@ -632,8 +648,7 @@ INTERRUPT_HANDLER_CLC5_E000
 	MOVFF U3RXB, LATC
 	CLRF TRISC, A
 	; reset WAIT
-	BSF INDF0, 2, A
-	BCF INDF0, 2, A
+	SETF U2TXB
 	; clear interrupt flag
 	BCF PIR10, CLC5IF, A
 	; wait until RD goes HIGH
@@ -641,15 +656,14 @@ INTERRUPT_HANDLER_CLC5_E000_WAIT_RD_CLEAR
 	BTFSS PORTA, 5, A
 	BRA INTERRUPT_HANDLER_CLC5_E000_WAIT_RD_CLEAR
 	; stop emitting value
-	COMF TRISC, F, A
+	SETF TRISC, A
 	; done
 	RETFIE 1
 INTERRUPT_HANDLER_CLC5_E000_WRITE
 	; write operation
 	MOVFF PORTC, U3TXB
 	; reset WAIT
-	BSF INDF0, 2, A
-	BCF INDF0, 2, A
+	SETF U2TXB
 	; clear interrupt flag
 	BCF PIR10, CLC5IF, A
 	; done
@@ -665,8 +679,7 @@ INTERRUPT_HANDLER_CLC5_E001
 	MOVFF PIR9, LATC
 	CLRF TRISC, A
 	; reset WAIT
-	BSF INDF0, 2, A
-	BCF INDF0, 2, A
+	SETF U2TXB
 	; clear interrupt flag
 	BCF PIR10, CLC5IF, A
 	; wait until RD goes HIGH
@@ -674,15 +687,14 @@ INTERRUPT_HANDLER_CLC5_E001_WAIT_RD_CLEAR
 	BTFSS PORTA, 5, A
 	BRA INTERRUPT_HANDLER_CLC5_E001_WAIT_RD_CLEAR
 	; stop emitting value
-	COMF TRISC, F, A
+	SETF TRISC, A
 	; done
 	RETFIE 1
 INTERRUPT_HANDLER_CLC5_E001_WRITE
 	; write operation
 	; do nothing
 	; reset WAIT
-	BSF INDF0, 2, A
-	BCF INDF0, 2, A
+	SETF U2TXB
 	; clear interrupt flag
 	BCF PIR10, CLC5IF, A
 	; done
@@ -693,8 +705,7 @@ INTERRUPT_HANDLER_CLC5_E001_WRITE
 INTERRUPT_HANDLER_CLC6
 	; currently nothing to do
 	; reset WAIT
-	BSF INDF0, 2, A
-	BCF INDF0, 2, A
+	SETF U2TXB
 	; clear interrupt flag
 	BCF PIR11, CLC6IF, A
 	; done
