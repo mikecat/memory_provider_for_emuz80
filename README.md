@@ -58,6 +58,8 @@ RA7 (UART RX) 以外の入力ピンは内部でプルアップしています。
 |0xE001|UART 状態 (`PIR9`)|-|
 |0xE000|UART 受信 (`U3RXB`)|UART 送信 (`U3TXB`)|
 
+UART の設定は、9600bps、8bit、パリティなし、1 ストップビットです。
+
 ## ビルド方法
 
 [GPUTILS - GNU PIC Utilities](https://gputils.sourceforge.io/) を用います。
