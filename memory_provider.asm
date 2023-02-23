@@ -492,11 +492,11 @@ Z80_RESET_LOOP2
 	BSF PIE10, CLC5IE
 	BSF PIE11, CLC6IE
 	; set interrupt vector location
-	MOVLW INTERRUPT_VECTOR & 0xFF
+	MOVLW LOW(INTERRUPT_VECTOR)
 	MOVWF INTBASEL
-	MOVLW (INTERRUPT_VECTOR >> 8) & 0xFF
+	MOVLW HIGH(INTERRUPT_VECTOR)
 	MOVWF INTBASEH
-	MOVLW (INTERRUPT_VECTOR >> 16) & 0xFF
+	MOVLW UPPER(INTERRUPT_VECTOR)
 	MOVWF INTBASEU
 	; lock interrupt vector location
 	MOVLW 0x55
@@ -506,9 +506,8 @@ Z80_RESET_LOOP2
 	BSF IVTLOCK, 0
 
 	; prepare for queries
-	; set ROM table high address
-	;MOVLW ROM_DATA >> 16
-	MOVLW 0x01 ; workaround: the high address was not correctly retrieved
+	; set ROM table upper address
+	MOVLW UPPER(ROM_DATA)
 	MOVWF TBLPTR + 2
 	; set bank to 2 for accessing UART
 	MOVLB 2
@@ -526,9 +525,9 @@ Z80_RESET_LOOP2
 	; output_freq = overflow_freq / 2
 	; increment = (output_freq * 2) * (1 << 20) / clock_freq
 	; output_freq = 2.5MHz, clock_freq = 64MHz -> increment = 81920.0 (0x14000)
-	MOVLW NCO1INC & 0xFF
+	MOVLW LOW(NCO1INC)
 	MOVWF FSR0, A
-	MOVLW (NCO1INC >> 8) & 0xFF
+	MOVLW HIGH(NCO1INC)
 	MOVWF FSR0 + 1, A
 	CLRF POSTINC0, A ; NCO1INC
 	MOVLW 0x40
