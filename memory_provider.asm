@@ -290,9 +290,9 @@ Z80_RESET_LOOP2
 	BSF U2CON1, 7
 
 	; configure CLC
-	; remainder : IN0 = IOREQ, IN1 = MREQ, IN4 = RFSH
-	; remainder : IN2 = A15, IN3 = A14, IN6 = A13, IN7 = A12
-	; remainder : OR + select negated input + reverse output polarity = AND
+	; reminder : IN0 = IOREQ, IN1 = MREQ, IN4 = RFSH
+	; reminder : IN2 = A15, IN3 = A14, IN6 = A13, IN7 = A12
+	; reminder : OR + select negated input + reverse output polarity = AND
 	MOVLB 0
 	; CLC1 : switch to LOW when one of detection signals becomes HIGH
 	CLRF CLCSELECT
