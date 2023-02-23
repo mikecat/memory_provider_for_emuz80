@@ -504,8 +504,6 @@ Z80_RESET_LOOP2
 	MOVWF DMAnDSA
 	MOVLW HIGH(TRISC)
 	MOVWF DMAnDSA + 1
-	MOVLW UPPER(TRISC)
-	MOVWF DMAnDSA + 2
 	; Source/Destination Message Size = Source/Destination Count = 1
 	MOVLW 0x01
 	MOVWF DMAnSSZ
