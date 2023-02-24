@@ -792,6 +792,14 @@ INTERRUPT_VECTOR
 ; ROM data
 	ORG 0x10000
 ROM_DATA
-	DB 0x18, 0xFE ; A: JR A
+	;   LD   HL, 8100H
+	;   LD   SP, HL
+	DB 0x21, 0x00, 0x81, 0xF9
+	; LOOP:
+	;   INC  (HL)
+	;   PUSH BC
+	;   POP  BC
+	;   JR   LOOP
+	DB 0x34, 0xC5, 0xC1, 0x18, 0xFB
 
 	END
