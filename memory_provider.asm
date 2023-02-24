@@ -321,7 +321,7 @@ Z80_RESET_LOOP2
 	; enable, no interrupts, 1-input D-FF
 	MOVLW B'10000100'
 	MOVWF CLCnCON
-	; CLC2 : detect ROM access (RD = 0, MREQ = 0, A15 = 0)
+	; CLC2 : detect ROM access (RD = 0, MREQ = 0, A15 = 0, A14 = 0)
 	INCF CLCSELECT, F
 	; Data 1 = IN5 (RD)
 	MOVLW D'5'
@@ -332,11 +332,11 @@ Z80_RESET_LOOP2
 	; Data 3 = IN2 (A15)
 	MOVLW D'2'
 	MOVWF CLCnSEL2
-	; Data 4 = CLC4 (0)
-	MOVLW D'54'
+	; Data 4 = IN3 (A14)
+	MOVLW D'3'
 	MOVWF CLCnSEL3
-	; Gate 1 = ~Data 1 & ~Data 2 & ~Data 3
-	MOVLW B'00101010'
+	; Gate 1 = ~Data 1 & ~Data 2 & ~Data 3 & ~Data 4
+	MOVLW B'10101010'
 	MOVWF CLCnGLS0
 	; Gate 2 = Gate 3 = Gate 4 = const 1
 	CLRF CLCnGLS1
