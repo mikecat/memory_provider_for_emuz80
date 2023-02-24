@@ -49,6 +49,7 @@ CLC2IF EQU 1
 CLC3IF EQU 5
 CLC5IF EQU 1
 CLC6IF EQU 1
+CLC7IF EQU 1
 CLC2IE EQU 1
 CLC3IE EQU 5
 CLC5IE EQU 1
@@ -141,6 +142,7 @@ PIR7 EQU 0x04B5
 PIR9 EQU 0x04B7
 PIR10 EQU 0x04B8
 PIR11 EQU 0x04B9
+PIR14 EQU 0x04BC
 
 LATA EQU 0x04BE
 LATC EQU 0x04C0
@@ -348,7 +350,7 @@ Z80_RESET_LOOP2
 	; enable, interrupt on rising edge, 4-input AND
 	MOVLW B'10010010'
 	MOVWF CLCnCON
-	; CLC3 : detect RAM access (RFSH = 1, MREQ = 0, CLC7 = 1)
+	; CLC3 : detect RAM access (RFSH = 1, MREQ = 0, CLC4 = 1)
 	INCF CLCSELECT, F
 	; Data 1 = IN4 (RFSH)
 	MOVLW D'4'
@@ -356,11 +358,11 @@ Z80_RESET_LOOP2
 	; Data 2 = IN1 (MREQ)
 	MOVLW D'1'
 	MOVWF CLCnSEL1
-	; Data 3 = CLC7
-	MOVLW D'57'
-	MOVWF CLCnSEL2
-	; Data 4 = CLC4 (0)
+	; Data 3 = CLC4
 	MOVLW D'54'
+	MOVWF CLCnSEL2
+	; Data 4 = TMR6 (don't care)
+	MOVLW D'24'
 	MOVWF CLCnSEL3
 	; Gate 1 = Data 1 & ~Data 2 & Data 3
 	MOVLW B'00011001'
@@ -375,19 +377,33 @@ Z80_RESET_LOOP2
 	; enable, interrupt on rising edge, 4-input AND
 	MOVLW B'10010010'
 	MOVWF CLCnCON
-	; CLC4 : don't use (interrupt flag is on the same register with UART3)
+	; CLC4 : helper for detect RAM access (A15 = 1, A14 = 0, A13 = 0, A12 = 0)
 	INCF CLCSELECT, F
-	; Data 1 = Data 2 = Data 3 = Data 4 = CLC4 (0)
-	MOVLW D'54'
+	; Data 1 = IN2 (A15)
+	MOVLW D'2'
 	MOVWF CLCnSEL0
+	; Data 2 = IN3 (A14)
+	MOVLW D'3'
 	MOVWF CLCnSEL1
+	; Data 3 = IN6 (A13)
+	MOVLW D'6'
 	MOVWF CLCnSEL2
+	; Data 4 = IN7 (A12)
+	MOVLW D'7'
 	MOVWF CLCnSEL3
-	; Gate 1 = Gate 2 = Gate 3 = Gate 4 = const 0
-	CLRF CLCnGLS0
+	; Gate 1 = Data 1 & ~Data 2 & ~Data 3 & ~Data 4
+	MOVLW B'10101001'
+	MOVWF CLCnGLS0
+	; Gate 2 = Gate 3 = Gate 4 = const 1
 	CLRF CLCnGLS1
 	CLRF CLCnGLS2
 	CLRF CLCnGLS3
+	; don't invert output
+	MOVLW B'00001111'
+	MOVWF CLCnPOL
+	; enable, no interrupts, 4-input AND
+	MOVLW B'10000010'
+	MOVWF CLCnCON
 	; CLC5 : detect REGISTER access (RFSH = 1, MREQ = 0, A15 = 1, A14 = 1)
 	INCF CLCSELECT, F
 	; Data 1 = IN4 (RFSH)
@@ -419,8 +435,8 @@ Z80_RESET_LOOP2
 	INCF CLCSELECT, F
 	; Data 1 = IN0 (IOREQ)
 	CLRF CLCnSEL0
-	; Data 2 = Data 3 = Data 4 = CLC4 (0)
-	MOVLW D'54'
+	; Data 2 = Data 3 = Data 4 = TMR6 (don't care)
+	MOVLW D'24'
 	MOVWF CLCnSEL1
 	MOVWF CLCnSEL2
 	MOVWF CLCnSEL3
@@ -437,32 +453,35 @@ Z80_RESET_LOOP2
 	; enable, interrupt on rising edge, 4-input AND
 	MOVLW B'10010010'
 	MOVWF CLCnCON
-	; CLC7 : helper for detect RAM access (A15 = 1, A14 = 0, A13 = 0, A12 = 0)
+	; CLC7 : detect ROM or RAM read (CLC2 = 1 OR (CLC3 = 1, RD = 0))
 	INCF CLCSELECT, F
-	; Data 1 = IN2 (A15)
-	MOVLW D'2'
+	; Data 1 = CLC2
+	MOVLW D'52'
 	MOVWF CLCnSEL0
-	; Data 2 = IN3 (A14)
-	MOVLW D'3'
+	; Data 2 = CLC3
+	MOVLW D'53'
 	MOVWF CLCnSEL1
-	; Data 3 = IN6 (A13)
-	MOVLW D'6'
+	; Data 3 = IN5 (RD)
+	MOVLW D'5'
 	MOVWF CLCnSEL2
-	; Data 4 = IN7 (A12)
-	MOVLW D'7'
+	; Data 4 = TMR6 (don't care)
+	MOVLW D'24'
 	MOVWF CLCnSEL3
-	; Gate 1 = Data 1 & ~Data 2 & ~Data 3 & ~Data 4
-	MOVLW B'10101001'
+	; Gate 1 = Data 1
+	MOVLW B'00000010'
 	MOVWF CLCnGLS0
-	; Gate 2 = Gate 3 = Gate 4 = const 1
+	; Gate 2 = const 1
 	CLRF CLCnGLS1
-	CLRF CLCnGLS2
+	; Gate 3 = Data 2 & ~Data 3
+	MOVLW B'00100100'
+	MOVWF CLCnGLS2
+	; Gate 4 = const 1
 	CLRF CLCnGLS3
 	; don't invert output
-	MOVLW B'00001111'
+	MOVLW B'00001110'
 	MOVWF CLCnPOL
-	; enable, no interrupts, 4-input AND
-	MOVLW B'10000010'
+	; enable, interrupt on positive edge, AND-OR
+	MOVLW B'10010000'
 	MOVWF CLCnCON
 	; CLC8 : access request (((RD = 0 OR RFSH = 1), MREQ = 0) OR IOREQ = 0)
 	INCF CLCSELECT, F
@@ -525,8 +544,8 @@ Z80_RESET_LOOP2
 	; enable DMA, enable Hardware Start Trigger
 	MOVLW B'11000000'
 	MOVWF DMAnCON0
-	; DMA2 : Move IVTBASEL to TRISC on CLC2 interrupt
-	;        (start emitting data on ROM access)
+	; DMA2 : Move IVTBASEL to TRISC on CLC7 interrupt
+	;        (start emitting data on ROM or RAM read access)
 	INCF DMASELECT, F
 	; Source Address = IVTBASEL
 	MOVLW LOW(IVTBASEL)
@@ -546,8 +565,8 @@ Z80_RESET_LOOP2
 	MOVWF DMAnSCNT
 	MOVWF DMAnDSZ
 	MOVWF DMAnDCNT
-	; Start Trigger = CLC2
-	MOVLW 0x31
+	; Start Trigger = CLC7
+	MOVLW 0x71
 	MOVWF DMAnSIRQ
 	; enable DMA, enable Hardware Start Trigger
 	MOVLW B'11000000'
@@ -647,8 +666,9 @@ INTERRUPT_HANDLER_CLC2
 	; reset WAIT
 	BSF INDF1, 2, A
 	BCF INDF1, 2, A
-	; clear interrupt flag
+	; clear interrupt flags
 	BCF PIR6, CLC2IF, A
+	BCF PIR14, CLC7IF, A
 	; done
 	RETFIE 1
 
@@ -663,28 +683,19 @@ INTERRUPT_HANDLER_CLC3
 	MOVF PORTD, W, A
 	IORLW 0x10
 	MOVWF FSR0 + 1, A
-	; check RD
-	BTFSC PORTA, 5, A
-	BRA INTERRUPT_HANDLER_CLC3_WRITE
-	; read operation
+	; read data to write
+	MOVF PORTC, W, A
 	; read RAM and output to the port
 	MOVFF INDF0, LATC
-	CLRF TRISC, A
 	; reset WAIT
 	BSF INDF1, 2, A
 	BCF INDF1, 2, A
-	; clear interrupt flag
+	; write to RAM if this is not read operation
+	BTFSS PIR14, CLC7IF, A
+	MOVWF INDF0, A
+	; clear interrupt flags
 	BCF PIR7, CLC3IF, A
-	; done
-	RETFIE 1
-INTERRUPT_HANDLER_CLC3_WRITE
-	; write operation
-	MOVFF PORTC, INDF0
-	; reset WAIT
-	BSF INDF1, 2, A
-	BCF INDF1, 2, A
-	; clear interrupt flag
-	BCF PIR7, CLC3IF, A
+	BCF PIR14, CLC7IF, A
 	; done
 	RETFIE 1
 
