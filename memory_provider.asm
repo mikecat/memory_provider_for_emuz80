@@ -348,7 +348,7 @@ Z80_RESET_LOOP2
 	; enable, interrupt on rising edge, 4-input AND
 	MOVLW B'10010010'
 	MOVWF CLCnCON
-	; CLC3 : detect RAM access (RFSH = 1, MREQ = 0, CRC7 = 1)
+	; CLC3 : detect RAM access (RFSH = 1, MREQ = 0, CLC7 = 1)
 	INCF CLCSELECT, F
 	; Data 1 = IN4 (RFSH)
 	MOVLW D'4'
