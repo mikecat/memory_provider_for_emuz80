@@ -89,6 +89,7 @@ CLCIN1PPS EQU 0x0262
 CLCIN2PPS EQU 0x0263
 CLCIN3PPS EQU 0x0264
 CLCIN4PPS EQU 0x0265
+CLCIN5PPS EQU 0x0266
 CLCIN6PPS EQU 0x0267
 CLCIN7PPS EQU 0x0268
 U3RXPPS EQU 0x0276
@@ -241,6 +242,9 @@ Z80_RESET_LOOP2
 	; CLCx Input 5 = RA2 (RFSH)
 	MOVLW B'00000010'
 	MOVWF CLCIN4PPS
+	; CLCx Input 6 = RA5 (RD)
+	MOVLW B'00000101'
+	MOVWF CLCIN5PPS
 	; CLCx Input 7 = RD5 (A13)
 	MOVLW B'00011101'
 	MOVWF CLCIN6PPS
@@ -281,7 +285,7 @@ Z80_RESET_LOOP2
 	BSF U3CON1, 7
 
 	; configure CLC
-	; reminder : IN0 = IOREQ, IN1 = MREQ, IN4 = RFSH
+	; reminder : IN0 = IOREQ, IN1 = MREQ, IN4 = RFSH, IN5 = RD
 	; reminder : IN2 = A15, IN3 = A14, IN6 = A13, IN7 = A12
 	; reminder : OR + select negated input + reverse output polarity = AND
 	MOVLB 0
@@ -314,10 +318,10 @@ Z80_RESET_LOOP2
 	; enable, no interrupts, 1-input D-FF
 	MOVLW B'10000100'
 	MOVWF CLCnCON
-	; CLC2 : detect ROM access (RFSH = 1, MREQ = 0, A15 = 0)
+	; CLC2 : detect ROM access (RD = 0, MREQ = 0, A15 = 0)
 	INCF CLCSELECT, F
-	; Data 1 = IN4 (RFSH)
-	MOVLW D'4'
+	; Data 1 = IN5 (RD)
+	MOVLW D'5'
 	MOVWF CLCnSEL0
 	; Data 2 = IN1 (MREQ)
 	MOVLW D'1'
@@ -328,8 +332,8 @@ Z80_RESET_LOOP2
 	; Data 4 = CLC4 (0)
 	MOVLW D'54'
 	MOVWF CLCnSEL3
-	; Gate 1 = Data 1 & ~Data 2 & ~Data 3
-	MOVLW B'00101001'
+	; Gate 1 = ~Data 1 & ~Data 2 & ~Data 3
+	MOVLW B'00101010'
 	MOVWF CLCnGLS0
 	; Gate 2 = Gate 3 = Gate 4 = const 1
 	CLRF CLCnGLS1
@@ -598,26 +602,12 @@ NOTHING_TO_DO
 ; ROM access handler
 	ORG ($ + 3) & ~3
 INTERRUPT_HANDLER_CLC2
-	; check RD
-	BTFSC PORTA, 5, A
-	BRA INTERRUPT_HANDLER_CLC2_WRITE
-	; read operation
 	; read ROM and output to the port
 	MOVFF PORTB, TBLPTR
 	MOVFF PORTD, TBLPTR + 1
 	TBLRD*
 	MOVFF TABLAT, LATC
 	CLRF TRISC, A
-	; reset WAIT
-	BSF INDF1, 2, A
-	BCF INDF1, 2, A
-	; clear interrupt flag
-	BCF PIR6, CLC2IF, A
-	; done
-	RETFIE 1
-INTERRUPT_HANDLER_CLC2_WRITE
-	; write operation
-	; do nothing because this is ROM
 	; reset WAIT
 	BSF INDF1, 2, A
 	BCF INDF1, 2, A
