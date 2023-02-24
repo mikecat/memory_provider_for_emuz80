@@ -57,6 +57,9 @@ GIE EQU 7
 
 PRLOCK EQU 0xB4
 DMA1PR EQU 0xB6
+DMA2PR EQU 0xB7
+MAINPR EQU 0xBE
+ISRPR EQU 0xBF
 
 CLCSELECT EQU 0xD5
 CLCnCON EQU 0xD6
@@ -520,10 +523,42 @@ Z80_RESET_LOOP2
 	; enable DMA, enable Hardware Start Trigger
 	MOVLW B'11000000'
 	MOVWF DMAnCON0
-	; give higher priority to DMA1
-	MOVLW D'6'
-	MOVWF DMA1PR
+	; DMA2 : Move IVTBASEL to TRISC on CLC2 interrupt
+	;        (start emitting data on ROM access)
+	INCF DMASELECT, F
+	; Source Address = IVTBASEL
+	MOVLW LOW(IVTBASEL)
+	MOVWF DMAnSSA
+	MOVLW HIGH(IVTBASEL)
+	MOVWF DMAnSSA + 1
+	MOVLW UPPER(IVTBASEL)
+	MOVWF DMAnSSA + 2
+	; Destination Address = TRISC
+	MOVLW LOW(TRISC)
+	MOVWF DMAnDSA
+	MOVLW HIGH(TRISC)
+	MOVWF DMAnDSA + 1
+	; Source/Destination Message Size = Source/Destination Count = 1
+	MOVLW 0x01
+	MOVWF DMAnSSZ
+	MOVWF DMAnSCNT
+	MOVWF DMAnDSZ
+	MOVWF DMAnDCNT
+	; Start Trigger = CLC2
+	MOVLW 0x31
+	MOVWF DMAnSIRQ
+	; enable DMA, enable Hardware Start Trigger
+	MOVLW B'11000000'
+	MOVWF DMAnCON0
 
+	; configure priority
+	MOVLW D'5'
+	MOVWF DMA1PR
+	MOVLW D'7'
+	MOVWF DMA2PR
+	MOVLW D'6'
+	MOVWF MAINPR
+	MOVWF ISRPR
 	; lock priority
 	MOVLW 0x55
 	MOVWF PRLOCK
@@ -607,7 +642,6 @@ INTERRUPT_HANDLER_CLC2
 	MOVFF PORTD, TBLPTR + 1
 	TBLRD*
 	MOVFF TABLAT, LATC
-	CLRF TRISC, A
 	; reset WAIT
 	BSF INDF1, 2, A
 	BCF INDF1, 2, A
@@ -741,6 +775,7 @@ INTERRUPT_HANDLER_CLC6
 	RETFIE 1
 
 ; interrupt vectors
+; (also used for PORTC open, place at address multiple of 0x100)
 	ORG 0x10000 - 0x100
 INTERRUPT_VECTOR
 	ORG INTERRUPT_VECTOR + 2 * 0x31
