@@ -464,7 +464,7 @@ Z80_RESET_LOOP2
 	; enable, no interrupts, 4-input AND
 	MOVLW B'10000010'
 	MOVWF CLCnCON
-	; CLC8 : access request (RFSH = 1, (MREQ = 0 OR IOREQ = 0))
+	; CLC8 : access request (((RD = 0 OR RFSH = 1), MREQ = 0) OR IOREQ = 0)
 	INCF CLCSELECT, F
 	; Data 1 = IN4 (RFSH)
 	MOVLW D'4'
@@ -474,23 +474,25 @@ Z80_RESET_LOOP2
 	MOVWF CLCnSEL1
 	; Data 3 = IN0 (IOREQ)
 	CLRF CLCnSEL2
-	; Data 4 = CLC4 (0)
-	MOVLW D'54'
+	; Data 4 = IN5 (RD)
+	MOVLW D'5'
 	MOVWF CLCnSEL3
-	; Gate 1 = Data 1
-	MOVLW  B'00000010'
+	; Gate 1 = Data 1 | ~Data 4
+	MOVLW  B'01000010'
 	MOVWF CLCnGLS0
-	; Gate 2 = ~Data 2 | ~Data 3
-	MOVLW  B'00010100'
+	; Gate 2 = ~Data 2
+	MOVLW  B'00000100'
 	MOVWF CLCnGLS1
-	; Gate 3 = Gate 4 = const 1
-	CLRF CLCnGLS2
+	; Gate 3 = ~Data 3
+	MOVLW  B'00010000'
+	MOVWF CLCnGLS2
+	; Gate 4 = const 1
 	CLRF CLCnGLS3
 	; don't invert output
-	MOVLW B'00001100'
+	MOVLW B'00001000'
 	MOVWF CLCnPOL
-	; enable, interrupt on negative edge, 4-input AND
-	MOVLW B'10001010'
+	; enable, interrupt on negative edge, AND-OR
+	MOVLW B'10001000'
 	MOVWF CLCnCON
 	; select CLC1
 	CLRF CLCSELECT
