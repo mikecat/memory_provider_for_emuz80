@@ -607,11 +607,11 @@ Z80_RESET_LOOP2
 	; configure priority
 	MOVLW D'4'
 	MOVWF DMA1PR
-	MOVLW D'6'
-	MOVWF DMA2PR
-	MOVLW D'7'
-	MOVWF DMA3PR
 	MOVLW D'5'
+	MOVWF DMA2PR
+	MOVLW D'6'
+	MOVWF DMA3PR
+	MOVLW D'7'
 	MOVWF MAINPR
 	MOVWF ISRPR
 	; lock priority
@@ -712,9 +712,9 @@ INTERRUPT_HANDLER_CLC3
 	; the most significant 2 bits of FSR1H will be ignored
 	; switching address between interrupt trigger and interrupt handling may enable
 	; access to RAM 0x3000 - 0x3FFF, but this region is unimplemented and should be useless
+	MOVLW 0x10
 	MOVFF PORTB, FSR0
-	MOVF PORTD, W, A
-	IORLW 0x10
+	IORWF PORTD, W, A
 	MOVWF FSR0 + 1, A
 	; read data to write
 	MOVF PORTC, W, A
