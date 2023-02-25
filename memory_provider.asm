@@ -43,6 +43,10 @@
 	; no code protection
 	__CONFIG 0x300009, 0xFF
 
+; memory definitions
+
+PORTA_SAVE_FOR_RAM EQU 0x0500
+
 ; register definitions
 
 CLC2IF EQU 1
@@ -59,6 +63,7 @@ GIE EQU 7
 PRLOCK EQU 0xB4
 DMA1PR EQU 0xB6
 DMA2PR EQU 0xB7
+DMA3PR EQU 0xB8
 MAINPR EQU 0xBE
 ISRPR EQU 0xBF
 
@@ -571,13 +576,42 @@ Z80_RESET_LOOP2
 	; enable DMA, enable Hardware Start Trigger
 	MOVLW B'11000000'
 	MOVWF DMAnCON0
+	; DMA3 : Move PORTA to PORTA_SAVE_FOR_RAM on CLC3 interrupt
+	;        (save RAM RD status)
+	INCF DMASELECT, F
+	; Source Address = PORTA
+	MOVLW LOW(PORTA)
+	MOVWF DMAnSSA
+	MOVLW HIGH(PORTA)
+	MOVWF DMAnSSA + 1
+	MOVLW UPPER(PORTA)
+	MOVWF DMAnSSA + 2
+	; Destination Address = PORTA_SAVE_FOR_RAM
+	MOVLW LOW(PORTA_SAVE_FOR_RAM)
+	MOVWF DMAnDSA
+	MOVLW HIGH(PORTA_SAVE_FOR_RAM)
+	MOVWF DMAnDSA + 1
+	; Source/Destination Message Size = Source/Destination Count = 1
+	MOVLW 0x01
+	MOVWF DMAnSSZ
+	MOVWF DMAnSCNT
+	MOVWF DMAnDSZ
+	MOVWF DMAnDCNT
+	; Start Trigger = CLC3
+	MOVLW 0x3D
+	MOVWF DMAnSIRQ
+	; enable DMA, enable Hardware Start Trigger
+	MOVLW B'11000000'
+	MOVWF DMAnCON0
 
 	; configure priority
-	MOVLW D'5'
+	MOVLW D'4'
 	MOVWF DMA1PR
-	MOVLW D'7'
-	MOVWF DMA2PR
 	MOVLW D'6'
+	MOVWF DMA2PR
+	MOVLW D'7'
+	MOVWF DMA3PR
+	MOVLW D'5'
 	MOVWF MAINPR
 	MOVWF ISRPR
 	; lock priority
@@ -666,9 +700,8 @@ INTERRUPT_HANDLER_CLC2
 	; reset WAIT
 	BSF INDF1, 2, A
 	BCF INDF1, 2, A
-	; clear interrupt flags
+	; clear interrupt flag
 	BCF PIR6, CLC2IF, A
-	BCF PIR14, CLC7IF, A
 	; done
 	RETFIE 1
 
@@ -690,12 +723,11 @@ INTERRUPT_HANDLER_CLC3
 	; reset WAIT
 	BSF INDF1, 2, A
 	BCF INDF1, 2, A
-	; write to RAM if this is not read operation
-	BTFSS PIR14, CLC7IF, A
-	MOVWF INDF0, A
-	; clear interrupt flags
+	; clear interrupt flag
 	BCF PIR7, CLC3IF, A
-	BCF PIR14, CLC7IF, A
+	; write to RAM if this is not read operation
+	BTFSC PORTA_SAVE_FOR_RAM, 5, A
+	MOVWF INDF0, A
 	; done
 	RETFIE 1
 
