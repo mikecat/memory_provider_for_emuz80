@@ -46,6 +46,8 @@
 ; memory definitions
 
 PORTA_SAVE_FOR_RAM EQU 0x0500
+ENTER_MANAGE_MODE_FLAG EQU PORTA_SAVE_FOR_RAM + 1
+STARTUP_DELAY_COUNTER EQU ENTER_MANAGE_MODE_FLAG + 1
 
 ; register definitions
 
@@ -59,6 +61,14 @@ CLC3IE EQU 5
 CLC5IE EQU 1
 CLC6IE EQU 1
 GIE EQU 7
+NOT_RI EQU 2
+U3EIE EQU 2
+U3TXIF EQU 1
+U3RXIF EQU 0
+RXBIMD EQU 3
+RXBKIE EQU 2
+TXMTIF EQU 7
+Z EQU 2
 
 PRLOCK EQU 0xB4
 DMA1PR EQU 0xB6
@@ -109,6 +119,8 @@ U3CON0 EQU 0x02D1
 U3CON1 EQU 0x02D2
 U3CON2 EQU 0x02D3
 U3BRG EQU 0x02D4
+U3ERRIR EQU 0x02D8
+U3ERRIE EQU 0x02D9
 
 ANSELA EQU 0x0400
 WPUA EQU 0x0401
@@ -140,6 +152,7 @@ IVTBASEU EQU 0x045F
 
 PIE6 EQU 0x04A4
 PIE7 EQU 0x04A5
+PIE9 EQU 0x04A7
 PIE10 EQU 0x04A8
 PIE11 EQU 0x04A9
 PIR6 EQU 0x04B4
@@ -163,12 +176,15 @@ PORTD EQU 0x04D1
 PORTE EQU 0x04D2
 
 INTCON0 EQU 0x04D6
+STATUS EQU 0x04D8
 
 FSR1 EQU 0x04E1
 INDF1 EQU 0x04E7
+WREG EQU 0x4E8
 FSR0 EQU 0x04E9
 POSTINC0 EQU 0x04EE
 INDF0 EQU 0x04EF
+PCON0 EQU 0x4F0
 TABLAT EQU 0x04F5
 TBLPTR EQU 0x04F6
 
@@ -178,8 +194,8 @@ TBLPTR EQU 0x04F6
 
 	; port settings
 	MOVLB 4
-	; RA3 (CLK), RA4 (WAIT), RA6 (TXD) : out / the other RAx : in
-	MOVLW B'10100111'
+	; RA3 (CLK), RA4 (WAIT) : out / the other RAx : in (RA6 (TXD) will be set to out later)
+	MOVLW B'11100111'
 	MOVWF TRISA
 	; RB0-RB7 (A0-A7) : in (default)
 	; RC0-RC7 (D0-D7) ; in (default)
@@ -236,6 +252,29 @@ Z80_RESET_LOOP2
 	ADDLW -1
 	BNZ Z80_RESET_LOOP1
 
+	; wait for a while to avoid UART desync due to reset
+	CLRF STARTUP_DELAY_COUNTER, A
+STARTUP_DELAY_LOOP1
+	MOVLW 0
+STARTUP_DELAY_LOOP2
+	ADDLW 1
+	BNC STARTUP_DELAY_LOOP2
+	MOVLW 12
+	ADDWF STARTUP_DELAY_COUNTER, F, A
+	BNC STARTUP_DELAY_LOOP1
+
+	; judge if we should enter management mode
+	BTFSS PCON0, NOT_RI, A
+	BRA RESET_INSTRUCTION_EXECUTED
+	; reset is not caused by RESET instructon: judge by RA7 and/or RA6 status
+	CLRF ENTER_MANAGE_MODE_FLAG, A
+	COMF PORTA, W, A
+	ANDLW B'11000000'
+	BTFSS STATUS, Z, A
+	SETF ENTER_MANAGE_MODE_FLAG, A ; enter management mode if RA7 = LOW or RA6 = LOW
+RESET_INSTRUCTION_EXECUTED
+	BSF PCON0, NOT_RI, A
+
 	; peripheral pin settings
 	; CLCx Input 1 = RA0 (IOREQ)
 	MOVLW B'00000000'
@@ -288,11 +327,16 @@ Z80_RESET_LOOP2
 	MOVWF U3BRG + 1
 	; don't stop on RX overflow
 	BSF U3CON2, 7
+	; enable break interrupt
+	BSF U3CON1, RXBIMD
+	BSF U3ERRIE, RXBKIE
 	; enable TX, enable RX, Asynchronous 8-bit, no pality
 	MOVLW B'00110000'
 	MOVWF U3CON0
 	; enable serial port
 	BSF U3CON1, 7
+	; enable RA6 (TXD) output
+	BCF TRISA, 6, A
 
 	; configure CLC
 	; reminder : IN0 = IOREQ, IN1 = MREQ, IN4 = RFSH, IN5 = RD
@@ -521,6 +565,17 @@ Z80_RESET_LOOP2
 	; select CLC1
 	CLRF CLCSELECT
 
+	; external input check
+	MOVF PORTB, W, A
+	ANDWF PORTC, W, A
+	ANDWF PORTD, W, A
+	XORLW 0xFF
+	BTFSS STATUS, Z, A
+	SETF ENTER_MANAGE_MODE_FLAG, A
+	; enter management mode according to the flag
+	TSTFSZ ENTER_MANAGE_MODE_FLAG, A
+	GOTO MANAGE_MODE_INIT
+
 	; configure DMA
 	; DMA1 : Move TRISB to TRISC on CLC8 interrupt
 	;        (stop emitting data on rising edge of MREQ/IOREQ)
@@ -633,6 +688,8 @@ Z80_RESET_LOOP2
 	BSF PIE7, CLC3IE
 	BSF PIE10, CLC5IE
 	BSF PIE11, CLC6IE
+	; enable UART3 break (error) interrupt
+	BSF PIE9, U3EIE
 	; set interrupt vector location
 	MOVLW LOW(INTERRUPT_VECTOR)
 	MOVWF IVTBASEL
@@ -819,6 +876,103 @@ INTERRUPT_HANDLER_CLC6
 	; done
 	RETFIE 1
 
+; UART3 error handler
+	ORG ($ + 3) & ~3
+INTERRUPT_HANDLER_U3E
+	; enter manage mode
+	SETF ENTER_MANAGE_MODE_FLAG, A
+	RESET
+	RETFIE 1 ; won't come here, for just in case
+
+; manage mode programs
+
+; send a byte in W register to UART3
+;PUT_CHAR
+;	BTFSS PIR9, U3TXIF, A
+;	BRA PUT_CHAR
+;	MOVFF WREG, U3TXB
+;	RETURN
+
+; send bytes pointed at by TBLPTR to UART3, terminated by 0x00 byte
+; TBLPTR data will be modified
+PUT_STRING_FROM_TABLE_LOOP ; call NOT this label
+	BTFSS PIR9, U3TXIF, A
+	BRA PUT_STRING_FROM_TABLE_LOOP
+	MOVFF TABLAT, U3TXB
+PUT_STRING_FROM_TABLE ; call this label
+	TBLRD*+
+	TSTFSZ TABLAT, A
+	BRA PUT_STRING_FROM_TABLE_LOOP
+	RETURN
+
+; set TBLPTR and print string
+SET_TBLPTR_PUT_STRING MACRO ADDRESS
+	MOVLW LOW(ADDRESS)
+	MOVWF TBLPTR, A
+	MOVLW HIGH(ADDRESS)
+	MOVWF TBLPTR + 1, A
+	MOVLW UPPER(ADDRESS)
+	MOVWF TBLPTR + 2, A
+	CALL PUT_STRING_FROM_TABLE
+	ENDM
+
+; read one byte from UART3 and store to W
+; wait until receiving one byte
+GET_CHAR
+	BTFSS PIR9, U3RXIF, A
+	BRA GET_CHAR
+	MOVFF U3ERRIR, WREG
+	ANDLW B'00001000'
+	BNZ GET_CHAR_FRAME_ERROR
+	MOVFF U3RXB, WREG
+	RETURN
+GET_CHAR_FRAME_ERROR
+	; frame error detected, ignore data
+	MOVFF U3RXB, WREG
+	BRA GET_CHAR
+
+MANAGE_MODE_INIT
+	SET_TBLPTR_PUT_STRING TITLE_MESSAGE
+MANAGE_MODE_MAIN_LOOP
+	SET_TBLPTR_PUT_STRING ASK_COMMAND_MESSAGE
+	CALL GET_CHAR
+	ADDLW -'r'
+	BZ START_Z80
+	ADDLW 'r' - '?'
+	BZ SHOW_HELP
+	BRA MANAGE_MODE_MAIN_LOOP
+
+START_Z80
+	SET_TBLPTR_PUT_STRING STARTING_Z80_MESSAGE
+	CLRF ENTER_MANAGE_MODE_FLAG, A
+	MOVLB HIGH(U3ERRIR)
+START_Z80_WAIT_SEND_END
+	BTFSS U3ERRIR, TXMTIF
+	BRA START_Z80_WAIT_SEND_END
+	RESET
+	GOTO MANAGE_MODE_MAIN_LOOP ; won't come here, for just in case
+
+SHOW_HELP
+	SET_TBLPTR_PUT_STRING HELP_MESSAGE
+	GOTO MANAGE_MODE_MAIN_LOOP
+
+; string length for DA must be multiple of 2 except for the final line
+; or extra NUL byte will be added
+
+TITLE_MESSAGE
+	DA "\nMemory Provider for Z80 0.3.0+\n"
+	DA "Copyright (C) 2023 MikeCAT\nL"
+	DA "icensed under The MIT License. https://opensource.org/license/mit/\n\n\0"
+
+ASK_COMMAND_MESSAGE
+	DA "command? (r/?)\n\0"
+
+STARTING_Z80_MESSAGE
+	DA "starting Z80...\n\0"
+
+HELP_MESSAGE
+	DA "r : run Z80 operation         ? : show command list\n\0"
+
 ; interrupt vectors
 ; (also used for PORTC open, place at address multiple of 0x100)
 	ORG 0x10000 - 0x100
@@ -827,6 +981,8 @@ INTERRUPT_VECTOR
 	DW INTERRUPT_HANDLER_CLC2 >> 2
 	ORG INTERRUPT_VECTOR + 2 * 0x3D
 	DW INTERRUPT_HANDLER_CLC3 >> 2
+	ORG INTERRUPT_VECTOR + 2 * 0x4A
+	DW INTERRUPT_HANDLER_U3E >> 2
 	ORG INTERRUPT_VECTOR + 2 * 0x51
 	DW INTERRUPT_HANDLER_CLC5 >> 2
 	ORG INTERRUPT_VECTOR + 2 * 0x59
