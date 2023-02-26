@@ -8,11 +8,12 @@ PIC18F47Q43 用の、[EMUZ80](https://vintagechips.wordpress.com/2022/03/05/emuz
 * デフォルトのクロック出力は 2.5MHz (LH0080 の定格)
 * 標準プログラムより約 90% 高速 ([EMUBASIC](https://github.com/vintagechips/emuz80/tree/6caf74b4cbbd2683d698ca7ee5abfcd35cfa09f1/examples/EMUBASIC) での [ASCIIART.BAS](https://github.com/vintagechips/emuz80/blob/6caf74b4cbbd2683d698ca7ee5abfcd35cfa09f1/ASCIIART.BAS) の実行による実験結果)
 * メモリだけでなく I/O 空間へのアクセスにも対応 (現在は空)
+* 管理モードを搭載
+  * Z80 をリセットした状態で止める (ファームウェアの更新がアドレスと衝突しない)
 * オープンソースライセンス (MIT)
 
 以下の機能の実装を予定しています。
 
-* Z80 をリセットした状態で止める (ファームウェアの更新がアドレスと衝突しない)
 * UART 経由でのクロック出力周波数の設定
 * UART 経由での ROM データの書き換え
 
@@ -60,6 +61,24 @@ RA7 (UART RX) 以外の入力ピンは内部でプルアップしています。
 |0xE000|UART 受信 (`U3RXB`)|UART 送信 (`U3TXB`)|
 
 UART の設定は、9600bps、8bit、パリティなし、1 ストップビットです。
+
+## 管理モード
+
+以下の操作のいずれかにより、管理モードに入ることができます。
+
+* RA7 が LOW の状態でリセットする
+* RA6 が LOW の状態でリセットする (UART の出力ピンなので、1kΩ程度の抵抗を経由して GND に接続する)
+* Z80 実行モード中に UART のブレークを送信する
+
+また、書き込み器との衝突防止のため、
+リセット時 PORTB、PORTC、PORTD のいずれかのピンに LOW が入力されている場合も管理モードに入ります。
+
+管理モードでは、以下のコマンドを用いることができます。  
+1 文字入力するだけで、Enter の入力を待たずにコマンドが実行されます。
+
+* `s` : Z80 実行モードに移行する
+* `p` : PORTB、PORTC、PORTD の入力状態を出力する
+* `?` : コマンド一覧を出力する
 
 ## ビルド方法
 
