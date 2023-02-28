@@ -129,6 +129,7 @@ Z80 に見せる ROM のデータは、プログラムメモリのアドレス 0
   * [GitHub - vintagechips/emuz80: The computer with only Z80 and PIC18F47Q43](https://github.com/vintagechips/emuz80)
 * 他の作者様の対応ファームウェア
   * [GitHub - tendai22/emuz80_kuma: A Z80 drove by PIC18F47Q43, original by @vintagechips.](https://github.com/tendai22/emuz80_kuma)
-  * [GitHub - yyhayami/emuz80_hayami: The computer with only Z80 and PIC18F47Q43](https://github.com/yyhayami/emuz80_hayami)
+  * [GitHub - yyhayami/emuz80_yyhayami: EMUZ80 firmware modify by yyhayami](https://github.com/yyhayami/emuz80_yyhayami)
+  * [GitHub - akih-san/EMUZ80-MON](https://github.com/akih-san/EMUZ80-MON)
 * ASCIIART(マンデルブロ集合)ベンチマーク
   * [Retro PC Gallery](http://haserin09.la.coocan.jp/asciiart.html)
