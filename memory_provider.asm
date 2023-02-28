@@ -21,8 +21,7 @@
 	LIST P=PIC18F46Q10
 	; LFSR on PIC18F47Q43 differs from one on PIC18F47Q10
 SET_FSR MACRO F, K
-	; directly shifting by 10 yields 0 for some reason :(
-	DW 0xEE00 | (((F) & 3) << 4) | ((((K) >> 5) >> 5) & 0xF)
+	DW 0xEE00 | (((F) & 3) << 4) | (((K) >> D'10') & 0xF)
 	DW 0xF000 | ((K) & 0x3FF)
 	ENDM
 
