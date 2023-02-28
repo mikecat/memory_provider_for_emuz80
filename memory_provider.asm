@@ -1099,9 +1099,9 @@ SHOW_HELP
 ; or extra NUL byte will be added
 
 TITLE_MESSAGE
-	DA "\nMemory Provider for Z80 0.4.0+\n"
-	DA "Copyright (C) 2023 MikeCAT\nL"
-	DA "icensed under The MIT License. https://opensource.org/license/mit/\n\n\0"
+	DA "\nMemory Provider for Z80 0.4.1\nC"
+	DA "opyright (C) 2023 MikeCAT\n"
+	DA "Licensed under The MIT License. https://opensource.org/license/mit/\n\n\0"
 
 ASK_COMMAND_MESSAGE
 	DA "command? (s/p/?)\n\0"
