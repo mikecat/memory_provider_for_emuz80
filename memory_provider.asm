@@ -827,10 +827,7 @@ EEPROM_FOR_PORT_OFF_OK
 	MOVLW UPPER(ROM_DATA)
 	MOVWF TBLPTR + 2, B
 	; give access to CLC1 via INDF1
-	MOVLW LOW(CLCnPOL)
-	MOVWF FSR1, B
-	MOVLW HIGH(CLCnPOL)
-	MOVWF FSR1 + 1, B
+	SET_FSR 1, CLCnPOL
 	; set bank to 2 for accessing UART
 	MOVLB 2
 
@@ -848,10 +845,7 @@ EEPROM_FOR_PORT_OFF_OK
 	; output_freq = overflow_freq / 2
 	; increment = (output_freq * 2) * (1 << 20) / clock_freq
 	; output_freq = 2.5MHz, clock_freq = 64MHz -> increment = 81920.0 (0x14000)
-	MOVLW LOW(NCO1INC)
-	MOVWF FSR0, A
-	MOVLW HIGH(NCO1INC)
-	MOVWF FSR0 + 1, A
+	SET_FSR 0, NCO1INC
 	CLRF POSTINC0, A ; NCO1INC
 	MOVLW 0x40
 	MOVWF POSTINC0, A ; NCO1INC + 1
