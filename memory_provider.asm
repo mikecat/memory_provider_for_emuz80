@@ -1296,7 +1296,7 @@ CLOCK_OFF_MESSAGE
 	DA "OFF (Hi-Z)\0"
 
 ASK_CONFIG_TO_EDIT_MESSAGE
-	DA "\r\nconfiguration to edit (0: don't edit)?\r\n\0"
+	DA "\r\nconfiguration to edit (0: don't edit)? (0/1/2)\r\n\0"
 
 ; interrupt vectors
 ; (also used for PORTC open, place at address multiple of 0x100)
