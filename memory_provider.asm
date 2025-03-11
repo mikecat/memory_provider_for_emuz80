@@ -1266,7 +1266,7 @@ EXTERNAL_INPUT_CONFIRM_MESSAGE
 	DA "tart Z80 operation anyway? (y/n)\n\0"
 
 CLOCK_ENABLE_MESSAGE
-	DA "clock enable    : \0"
+	DA "clock output    : \0"
 
 CLOCK_FREQUENCY_MESSAGE
 	DA "\nclock frequency : \0"
