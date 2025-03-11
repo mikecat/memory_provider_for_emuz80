@@ -1246,10 +1246,10 @@ CONFIG_MENU_CLOCK_FREQUENCY_1
 TITLE_MESSAGE
 	DA "\nMemory Provider for Z80 0.4.1+dev"
 	DA "\nCopyright (C) 2023,2025 MikeCAT"
-	DA "\nLicensed under The MIT License. https://opensource.org/license/mit/\n\n\0"
+	DA "\nLicensed under The MIT License. https://opensource.org/license/mit/\n\0"
 
 ASK_COMMAND_MESSAGE
-	DA "command? (s/p/c/?)\n\0"
+	DA "\ncommand? (s/p/c/?)\n\n\0"
 
 STARTING_Z80_MESSAGE
 	DA "starting Z80...\n\0"
