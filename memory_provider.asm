@@ -1157,6 +1157,7 @@ SHOW_HELP
 	GOTO MANAGE_MODE_MAIN_LOOP
 
 CONFIG_MENU
+	; print current configurations
 	SET_TBLPTR_PUT_STRING CLOCK_ENABLE_MESSAGE
 	MOVF GPR_CLOCK_ENABLE, W, A
 	BNZ CONFIG_MENU_CLOCK_ENABLE_ON
@@ -1240,7 +1241,25 @@ CONFIG_MENU_CLOCK_FREQUENCY_1
 	CALL PUT_CHAR
 	MOVLW '\n'
 	CALL PUT_CHAR
-	GOTO MANAGE_MODE_MAIN_LOOP
+	; let the user choose which configuration to edit
+	SET_TBLPTR_PUT_STRING ASK_CONFIG_TO_EDIT_MESSAGE
+CONFIG_TO_EDIT_SELECT_LOOP
+	CALL GET_CHAR
+	ADDLW -'0'
+	BZ CONFIG_EXIT_EDIT_MENU
+	ADDLW -1
+	BZ CONFIG_EDIT_CLOCK_ENABLE
+	ADDLW -1
+	BZ CONFIG_EDIT_CLOCK_FREQUENCY
+	BRA CONFIG_TO_EDIT_SELECT_LOOP
+CONFIG_EXIT_EDIT_MENU
+	BRA MANAGE_MODE_MAIN_LOOP
+	; edit clock enable configuration
+CONFIG_EDIT_CLOCK_ENABLE
+	BRA CONFIG_TO_EDIT_SELECT_LOOP ; not implemented
+	; edit clock frequency configuration
+CONFIG_EDIT_CLOCK_FREQUENCY
+	BRA CONFIG_TO_EDIT_SELECT_LOOP ; not implemented
 
 ; string length for DA must be multiple of 2 except for the final line
 ; or extra NUL byte will be added
@@ -1268,13 +1287,16 @@ EXTERNAL_INPUT_CONFIRM_MESSAGE
 	DA "Start Z80 operation anyway? (y/n)\r\n\0"
 
 CLOCK_ENABLE_MESSAGE
-	DA "clock output    : \0"
+	DA "1. clock output    : \0"
 
 CLOCK_FREQUENCY_MESSAGE
-	DA "\r\nclock frequency : \0"
+	DA "\r\n2. clock frequency : \0"
 
 CLOCK_OFF_MESSAGE
 	DA "OFF (Hi-Z)\0"
+
+ASK_CONFIG_TO_EDIT_MESSAGE
+	DA "\r\nconfiguration to edit (0: don't edit)?\r\n\0"
 
 ; interrupt vectors
 ; (also used for PORTC open, place at address multiple of 0x100)
