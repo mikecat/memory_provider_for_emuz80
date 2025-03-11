@@ -1093,6 +1093,8 @@ PRINT_PORT_STATUS
 	RCALL PRINT_PORT_STATUS_SUB
 	MOVF PORTC, W, A
 	CALL PRINT_BIN8
+	MOVLW '\r'
+	CALL PUT_CHAR
 	MOVLW '\n'
 	CALL PUT_CHAR
 	RETURN
@@ -1244,32 +1246,32 @@ CONFIG_MENU_CLOCK_FREQUENCY_1
 ; or extra NUL byte will be added
 
 TITLE_MESSAGE
-	DA "\nMemory Provider for Z80 0.4.1+dev"
-	DA "\nCopyright (C) 2023,2025 MikeCAT"
-	DA "\nLicensed under The MIT License. https://opensource.org/license/mit/\n\0"
+	DA "\r\nMemory Provider for Z80 0.4.1+dev\r"
+	DA "\nCopyright (C) 2023,2025 MikeCAT\r\n"
+	DA "Licensed under The MIT License. https://opensource.org/license/mit/\r\n\0"
 
 ASK_COMMAND_MESSAGE
-	DA "\ncommand? (s/p/c/?)\n\n\0"
+	DA "\r\ncommand? (s/p/c/?)\r\n\r\n\0"
 
 STARTING_Z80_MESSAGE
-	DA "starting Z80...\n\0"
+	DA "starting Z80...\r\n\0"
 
 HELP_MESSAGE
-	DA "s : start Z80 operation       p : show address/data port status\n"
-	DA "c : view/edit configuration   ? : show command list\n\0"
+	DA "s : start Z80 operation       p : show address/data port status\r"
+	DA "\nc : view/edit configuration   ? : show command list\r\n\0"
 
 PORT_MESSAGE
 	DA "PORT\0"
 
 EXTERNAL_INPUT_CONFIRM_MESSAGE
-	DA "External input detected on address/data port(s).\nS"
-	DA "tart Z80 operation anyway? (y/n)\n\0"
+	DA "External input detected on address/data port(s).\r\n"
+	DA "Start Z80 operation anyway? (y/n)\r\n\0"
 
 CLOCK_ENABLE_MESSAGE
 	DA "clock output    : \0"
 
 CLOCK_FREQUENCY_MESSAGE
-	DA "\nclock frequency : \0"
+	DA "\r\nclock frequency : \0"
 
 CLOCK_OFF_MESSAGE
 	DA "OFF (Hi-Z)\0"
