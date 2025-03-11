@@ -5,7 +5,7 @@ PIC18F47Q43 用の、[EMUZ80](https://vintagechips.wordpress.com/2022/03/05/emuz
 
 以下の特徴があります。
 
-* デフォルトのクロック出力は 2.5MHz (LH0080 の定格)
+* デフォルトのクロック出力は 2.5MHz (ただし、クロック生成の仕組み上、2.5MHz 相当より短いパルスも現れる)
 * 標準プログラムより約 90% 高速 ([EMUBASIC](https://github.com/vintagechips/emuz80/tree/6caf74b4cbbd2683d698ca7ee5abfcd35cfa09f1/examples/EMUBASIC) での [ASCIIART.BAS](https://github.com/vintagechips/emuz80/blob/6caf74b4cbbd2683d698ca7ee5abfcd35cfa09f1/ASCIIART.BAS) の実行による実験結果)
 * メモリだけでなく I/O 空間へのアクセスにも対応 (現在は空)
 * 管理モードを搭載
