@@ -325,6 +325,9 @@ CONFIG_CLOCK_FREQUENCY_ALREADY_SET
 	CLRF SLRCOND, B
 	CLRF SLRCONE, B
 
+	; set INT = 1
+	BSF LATE, 2, A
+
 	; for peripheral pin settings
 	MOVLB 2
 	; give control of RA3 (CLK) to LATA
